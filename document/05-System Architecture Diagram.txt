@@ -1,0 +1,36 @@
+@startuml
+!define RECTANGLE class
+!define ARROW ->
+
+[Frontend (Next.js)] #LightBlue
+[Gateway API (NestJS)] #LightGreen
+[auth-svc] #LightYellow
+[order-svc] #LightYellow
+[portfolio-svc] #LightYellow
+[feed-svc] #LightYellow
+[asset-svc] #LightYellow
+[Postgres] #LightGray
+[Redis (Sentinel)] #LightOrange
+[Redis Replica] #LightOrange
+
+[Frontend (Next.js)] ARROW [Gateway API (NestJS)]
+[Gateway API (NestJS)] -down- [auth-svc]
+[Gateway API (NestJS)] -down- [order-svc]
+[Gateway API (NestJS)] -down- [portfolio-svc]
+[Gateway API (NestJS)] -down- [feed-svc]
+[Gateway API (NestJS)] -down- [asset-svc]
+
+[auth-svc] -down- [Postgres]
+[order-svc] -down- [Postgres]
+[portfolio-svc] -down- [Postgres]
+[feed-svc] -down- [Postgres]
+[asset-svc] -down- [Postgres]
+
+[Postgres] -right- [Redis (Sentinel)]
+[Redis (Sentinel)] -right- [Redis Replica]
+
+note right of Redis (Sentinel)
+  Pub/Sub message bus for events
+end note
+
+@enduml
