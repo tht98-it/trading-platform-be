@@ -1,0 +1,72 @@
+services:
+  gateway:
+    build:
+      context: ./src/services/gateway-service
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - auth
+      - user
+
+  auth:
+    build:
+      context: ./src/services/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - '3001:3001'
+    env_file:
+      - ./src/services/auth-service/.env
+    command: pnpm run start:dev
+    depends_on:
+      - postgres-auth
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', 'postgres-auth']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  user:
+    build:
+      context: ./src/services/user-service
+      dockerfile: Dockerfile
+    ports:
+      - '3002:3002'
+    env_file:
+      - ./src/services/user-service/.env
+    command: pnpm run start:dev
+    depends_on:
+      - postgres-user
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', 'postgres-user']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-auth:
+    image: postgres:17.5-alpine3.22
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: auth_db
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+
+  postgres-user:
+    image: postgres:17.5-alpine3.22
+    ports:
+      - '5431:5432'
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: user_db
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_auth_data:
+  postgres_user_data:
