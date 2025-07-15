@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthEntity } from '../domain/auth.entity';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -23,6 +24,9 @@ import { JwtModule } from '@nestjs/jwt';
       database: 'auth_db',
       entities: [AuthEntity],
       synchronize: true, // Chỉ dùng trong dev
+    }),
+    ConfigModule.forRoot({
+      isGlobal: true, // nếu bạn muốn dùng ở tất cả modules
     }),
   ],
   controllers: [AuthController],

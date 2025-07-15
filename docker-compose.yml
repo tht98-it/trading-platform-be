@@ -4,69 +4,103 @@ services:
       context: ./src/services/gateway-service
       dockerfile: Dockerfile
     ports:
-      - '3000:3000'
+      - '8080:8080'
     environment:
       - NODE_ENV=development
+    command: pnpm run start:dev
     depends_on:
-      - auth
-      - user
-
+      auth:
+        condition: service_healthy
+      user:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - app-network
   auth:
     build:
       context: ./src/services/auth-service
       dockerfile: Dockerfile
     ports:
-      - '3001:3001'
+      - '8081:8081'
     env_file:
       - ./src/services/auth-service/.env
     command: pnpm run start:dev
     depends_on:
-      - postgres-auth
+      postgres-auth:
+        condition: service_healthy
     healthcheck:
-      test: ['CMD', 'pg_isready', '-h', 'postgres-auth']
+      test: ['CMD', 'curl', '-f', 'http://localhost:8081/health']
       interval: 5s
       timeout: 5s
       retries: 5
-
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - app-network
   user:
     build:
       context: ./src/services/user-service
       dockerfile: Dockerfile
     ports:
-      - '3002:3002'
+      - '8082:8082'
     env_file:
       - ./src/services/user-service/.env
     command: pnpm run start:dev
     depends_on:
-      - postgres-user
+      postgres-user:
+        condition: service_healthy
     healthcheck:
-      test: ['CMD', 'pg_isready', '-h', 'postgres-user']
+      test: ['CMD', 'curl', '-f', 'http://localhost:8082/health']
       interval: 5s
       timeout: 5s
       retries: 5
-
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - app-network
   postgres-auth:
     image: postgres:17.5-alpine3.22
-    ports:
-      - '5433:5432'
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
       POSTGRES_DB: auth_db
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
-
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U admin -d auth_db']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - app-network
   postgres-user:
     image: postgres:17.5-alpine3.22
-    ports:
-      - '5431:5432'
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
       POSTGRES_DB: user_db
     volumes:
       - postgres_user_data:/var/lib/postgresql/data
-
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U admin -d user_db']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - app-network
 volumes:
   postgres_auth_data:
   postgres_user_data:
+networks:
+  app-network:
+    driver: bridge

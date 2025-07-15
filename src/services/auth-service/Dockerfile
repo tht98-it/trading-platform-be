@@ -1,21 +1,26 @@
+# Sử dụng node:24-alpine
 FROM node:24-alpine
 
 WORKDIR /app
 
-# Copy dependency files trước
+# Copy dependency files
 COPY package.json pnpm-lock.yaml ./
 
-# Cài pnpm và dependencies
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+# Enable pnpm qua corepack
+RUN corepack enable && corepack prepare pnpm --activate
 
-# Copy source code và config còn lại
+# Cài dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code và config
 COPY tsconfig.json ./
 COPY src ./src
 
 # Build app
-RUN pnpm run build
+RUN pnpm run build && ls -la dist  # Kiểm tra thư mục dist
 
-# Default command (tùy)
+# Expose port 3001 (khớp với docker-compose.yml)
+EXPOSE 8081
+
+# Default command
 CMD ["pnpm", "start"]
-
-EXPOSE 3001

@@ -1,0 +1,7 @@
+{
+  "entryFile": "main",
+  "sourceRoot": "src/services/user-service",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}
