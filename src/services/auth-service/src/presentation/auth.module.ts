@@ -1,35 +1,55 @@
 import { Module } from '@nestjs/common';
-import { AuthController } from './auth.controller';
-import { AuthService } from '../application/auth.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthEntity } from '../domain/auth.entity';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { AuthController } from '../presentation/auth.controller';
+import { AuthService } from '../application/auth.service';
+import { GoogleStrategy } from '../infrastructure/strategies/google.strategy';
+import { AuthEntity } from '../domain/auth.entity';
 
 @Module({
   imports: [
-    PassportModule,
-    JwtModule.register({
-      secret: 'your-secret-key', // Thay bằng biến môi trường
-      signOptions: { expiresIn: '60m' },
+    ConfigModule.forRoot({ isGlobal: true }),
+
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get('POSTGRES_HOST') || 'localhost',
+        port: +config.get('POSTGRES_PORT') || 5432,
+        username: config.get('POSTGRES_USER') || 'admin',
+        password: config.get('POSTGRES_PASSWORD') || 'password',
+        database: config.get('POSTGRES_DB') || 'auth_db',
+        entities: [AuthEntity],
+        synchronize: true,
+      }),
     }),
     TypeOrmModule.forFeature([AuthEntity]),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'postgres-auth',
-      port: 5432,
-      username: 'admin',
-      password: 'password',
-      database: 'auth_db',
-      entities: [AuthEntity],
-      synchronize: true, // Chỉ dùng trong dev
-    }),
-    ConfigModule.forRoot({
-      isGlobal: true, // nếu bạn muốn dùng ở tất cả modules
+
+    ClientsModule.register([
+      {
+        name: 'USER_SERVICE',
+        transport: Transport.REDIS,
+        options: {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: +(process.env.REDIS_PORT ?? 6379),
+        },
+      },
+    ]),
+
+    PassportModule.register({ session: false }),
+
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get('JWT_SECRET'),
+        signOptions: { expiresIn: '60m' },
+      }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, GoogleStrategy],
 })
 export class AuthModule {}

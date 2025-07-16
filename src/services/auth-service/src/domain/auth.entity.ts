@@ -1,5 +1,11 @@
-// src/domain/auth.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 
 @Entity('refresh_tokens')
 export class AuthEntity {
@@ -7,15 +13,30 @@ export class AuthEntity {
   id: string;
 
   @Column()
+  @Index()
   userId: string;
 
   @Column()
-  token: string;
+  @Index()
+  token: string; // nên hash nếu cần bảo mật cao
 
   @Column()
   expiresAt: Date;
 
+  @Column({ default: false })
+  revoked: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
   isExpired(currentTime: Date = new Date()): boolean {
     return this.expiresAt.getTime() <= currentTime.getTime();
+  }
+
+  isActive(currentTime: Date = new Date()): boolean {
+    return !this.revoked && !this.isExpired(currentTime);
   }
 }

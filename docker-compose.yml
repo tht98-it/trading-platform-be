@@ -1,4 +1,14 @@
 services:
+  redis:
+    image: redis:8.0-alpine
+    container_name: redis
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 3
   gateway:
     build:
       context: ./src/services/gateway-service
@@ -28,6 +38,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - '8081:8081'
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     env_file:
       - ./src/services/auth-service/.env
     command: pnpm run start:dev
@@ -49,6 +62,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - '8082:8082'
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     env_file:
       - ./src/services/user-service/.env
     command: pnpm run start:dev
@@ -72,6 +88,8 @@ services:
       POSTGRES_DB: auth_db
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U admin -d auth_db']
       interval: 10s
@@ -89,6 +107,8 @@ services:
       POSTGRES_DB: user_db
     volumes:
       - postgres_user_data:/var/lib/postgresql/data
+    ports:
+      - '5433:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U admin -d user_db']
       interval: 10s

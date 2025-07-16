@@ -1,29 +1,32 @@
 import { Module } from '@nestjs/common';
-import { UserController } from './user.controller';
-import { UserService } from '../application/user.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from '../domain/user.entity';
-import { ConfigModule } from '@nestjs/config';
+import { UserService } from '../application/user.service';
+import { UserController } from './controller/user.controller';
+import { UserListener } from '../infrastructure/user.listener';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserEntity]),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'postgres-user',
-      port: 5432,
-      username: 'admin',
-      password: 'password',
-      database: 'user_db',
-      entities: [UserEntity],
-      synchronize: true, // Chỉ dùng trong dev
-    }),
-    ConfigModule.forRoot({
-      isGlobal: true, // nếu bạn muốn dùng ở tất cả modules
-    }),
-  ],
+    ConfigModule.forRoot({ isGlobal: true }),
 
-  controllers: [UserController],
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get('POSTGRES_HOST') || 'localhost',
+        port: +config.get('POSTGRES_PORT') || 5432,
+        username: config.get('POSTGRES_USER') || 'admin',
+        password: config.get('POSTGRES_PASSWORD') || 'password',
+        database: config.get('POSTGRES_DB') || 'user_db',
+        entities: [UserEntity],
+        synchronize: true, // chỉ nên dùng trong dev
+      }),
+    }),
+
+    TypeOrmModule.forFeature([UserEntity]),
+  ],
+  controllers: [UserController, UserListener],
   providers: [UserService],
 })
 export class UserModule {}
