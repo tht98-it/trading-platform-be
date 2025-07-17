@@ -5,16 +5,16 @@ import { GatewayMiddleware } from '../infrastructure/middleware/gateway.middlewa
 import { JwtStrategy } from '../infrastructure/stategies/jwt.strategy';
 import { JwtAuthGuard } from '../infrastructure/guard/jwt.guard';
 import { UserGatewayController } from './gateway.controller';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true, // Nếu bạn muốn ConfigService dùng toàn cục
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     HttpModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }), // rõ ràng hơn
   ],
   controllers: [UserGatewayController],
-  providers: [JwtStrategy, JwtAuthGuard],
+  providers: [JwtStrategy],
 })
 export class GatewayModule {
   configure(consumer: MiddlewareConsumer) {

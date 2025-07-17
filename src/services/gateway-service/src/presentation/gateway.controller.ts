@@ -1,33 +1,47 @@
 // src/infrastructure/controllers/gateway.controller.ts
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Req,
+  UseGuards,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { JwtAuthGuard } from '../infrastructure/guard/jwt.guard';
-import { Request, Response } from 'express';
+import { Request } from 'express';
+
 @Controller('users')
 export class UserGatewayController {
   constructor(private readonly httpService: HttpService) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getUserProfile(@Req() req: Request, @Res() res: Response) {
+  async getUserProfile(@Req() req: Request) {
     try {
-      console.log('Trigger gateway getUserProfile');
-
-      console.log('User ID:', req.user?.userId);
+      const userId = req.user?.userId; // req.user được JwtAuthGuard gắn vào
+      const authHeader = req.headers.authorization || '';
 
       const response = await this.httpService.axiosRef.get(
-        `http://localhost:8082/user/me`,
+        'http://localhost:8082/users/me',
         {
           headers: {
-            'x-user-id': req.user?.userId ?? '',
-            Authorization: req.headers.authorization || '',
+            'x-user-id': userId ?? '',
+            Authorization: authHeader,
           },
+          timeout: 3000, // ms
         },
       );
 
-      res.json(response.data);
-    } catch (err) {
-      res.status(500).json({ error: 'Failed to fetch user profile' });
+      return response.data; // Nest tự động serialize
+    } catch (error) {
+      // Log lỗi cụ thể nếu cần
+      const message =
+        error?.response?.data?.message || 'Failed to fetch user profile';
+      const statusCode =
+        error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
+
+      throw new HttpException(message, statusCode);
     }
   }
 }
